@@ -34,9 +34,9 @@ train_ratio = 0.6
 val_ratio = 0.2
 
 # Files where to save lists
-train_list_file = os.path.join(data_dir, 'train.txt')
-val_list_file = os.path.join(data_dir, 'val.txt')
-test_list_file = os.path.join(data_dir, 'test.txt')
+train_list_file = 'train.txt'
+val_list_file = 'val.txt'
+test_list_file = 'test.txt'
 
 # Extract frames from videos
 video_gen = ((dirpath, filenames[0]) for dirpath,
@@ -46,6 +46,7 @@ for dirpath, filename in video_gen:
     frames_dir = os.path.join(dirpath, 'frames')
     if not os.path.exists(frames_dir):
         os.makedirs(frames_dir)
+        print "Created frame dir: ", dirpath
     else:
         print "Skipping: frames folder for ", dirpath, " already exists!"
         continue
@@ -68,9 +69,12 @@ for dirpath, filename in anno_gen:
     frames_dir = os.path.join(dirpath, 'frames')
     if not os.path.exists(frames_dir):
         os.makedirs(frames_dir)
-    else:
+    elif not redo:
         print "Skipping: frames folder for ", dirpath, " already exists!"
         continue
+    else:
+        print "Redoing annotations for ", dirpath
+        pass
 
     bboxes = np.genfromtxt(os.path.join(dirpath, anno_name + anno_ext), dtype=[
     ('TrackID', int), ('xmin', int), ('ymin', int), ('xmax', int),
@@ -83,14 +87,40 @@ for dirpath, filename in anno_gen:
     bboxes_visible = bboxes_visible[bboxes_visible['occluded']==0] # Or occluded
 
     unique_frames = set(bboxes_visible['frame'])
+
+    # Get image size
+    img = cv2.imread(os.path.join(dirpath.replace("annotations","videos"), 'frames', '0.jpg'))
+    height, width, depth = img.shape
+
     for frame in sorted(unique_frames):
         # Create the annotation file for each frame in bboxes_visible
-        with open(os.path.join(dirpath, 'frames'), 'w') as f:
-            f.writelines(map(lambda x: x+'\n', bboxes_visible[bboxes_visible['frame']==frame]))
+        with open(os.path.join(dirpath, 'frames', str(frame) + '.xml'), 'w') as f:
+            print >>f, "<annotation>"
+            print >>f, "<folder>", dirpath.replace("annotations","videos")+"/frames", "</folder>"
+            print >>f, "<filename>", str(frame)+".jpg", "</filename>"
+            print >>f, "<size>"
+            print >>f, "<width>", str(width), "</width>"
+            print >>f, "<height>", str(height), "</height>"
+            print >>f, "<depth>", str(depth), "</depth>"
+            print >>f, "</size>"
+            for bbox in bboxes_visible[bboxes_visible['frame']==frame]:
+                print >>f, "<object>"
+                print >>f, "<name>"+bbox["label"].replace('''"''',"")+"</name>"
+                print >>f, "<pose>Unspecified</pose>"
+                print >>f, "<truncated>0</truncated>"
+                print >>f, "<difficult>0</difficult>"
+                print >>f, "<bndbox>"
+                print >>f, "<xmin>", str(bbox["xmin"]), "</xmin>"
+                print >>f, "<xmax>", str(bbox["xmax"]), "</xmax>"
+                print >>f, "<ymin>", str(bbox["ymin"]), "</ymin>"
+                print >>f, "<ymax>", str(bbox["ymax"]), "</ymax>"
+                print >>f, "</bndbox>"
+                print >>f, "</object>"
+            print >>f, "</annotation>"
 
 # Obtain list of frames
 frames_list_vid = [[os.path.join(dirpath, f) for f in filenames] for dirpath,
- dirnames, filenames in os.walk(vidset_dir) if 'frames' in dirpath]
+ dirnames, filenames in os.walk(anno_dir) if 'frames' in dirpath]
 frames_list = list(itertools.chain.from_iterable(frames_list_vid))
 print "Total frames extracted: ", str(len(frames_list))
 
@@ -107,11 +137,14 @@ print "Train size: ", str(train_split_size)
 print "Validation size: ", str(val_split_size)
 print "Test size: ", str(len(frames_list) - train_split_size - val_split_size)
 
-os.chdir(os.path.join(os.environ['CAFFE_ROOT'], 'data', SDD)
+os.chdir(os.path.join(os.environ['CAFFE_ROOT'], 'data', 'SDD'))
 # Save lists
 with open(train_list_file, 'w') as f:
-    f.writelines(map(lambda x: x+'\n', train_split))
+    f.writelines(map(lambda x: x.replace("annotations","videos").replace("xml","jpg")
+    +' '+x+'\n', train_split))
 with open(val_list_file, 'w') as f:
-    f.writelines(map(lambda x: x+'\n', val_split))
+    f.writelines(map(lambda x:x.replace("annotations","videos").replace("xml","jpg")
+    +' '+x+'\n', val_split))
 with open(test_list_file, 'w') as f:
-    f.writelines(map(lambda x: x+'\n', test_split))
+    f.writelines(map(lambda x: x.replace("annotations","videos").replace("xml","jpg")
+    +' '+x+'\n', test_split))
