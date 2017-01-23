@@ -83,8 +83,8 @@ train_data = "data/SDD/lmdb/SDD_train_lmdb"
 # The database file for testing data. Created by data/coco/create_data.sh
 test_data = "data/SDD/lmdb/SDD_val_lmdb"
 # Specify the batch sampler.
-resize_width = 300
-resize_height = 300
+resize_width = 500
+resize_height = 500
 resize = "{}x{}".format(resize_width, resize_height)
 batch_sampler = [
         {
