@@ -14,7 +14,7 @@ HOMEDIR = os.path.expanduser("~")
 DATASETS = os.environ['DATASETS']
 
 # If true, re-create all list files.
-redo = True
+redo = False
 # The root directory which holds all information of the dataset.
 data_dir = os.path.join(DATASETS, 'SDD')
 os.chdir(data_dir)
@@ -34,9 +34,9 @@ train_ratio = 0.6
 val_ratio = 0.2
 
 # Files where to save lists
-train_list_file = 'train.txt'
-val_list_file = 'val.txt'
-test_list_file = 'test.txt'
+train_list_file = 'train_small.txt'
+val_list_file = 'val_small.txt'
+test_list_file = 'test_small.txt'
 
 # Extract frames from videos
 video_gen = ((dirpath, filenames[0]) for dirpath,
@@ -82,13 +82,14 @@ for dirpath, filename in anno_gen:
     ('generated', int), ('label', 'S15')])
 
     bboxes_sorted = np.sort(bboxes, order='frame')
-    bboxes_sorted = bboxes_sorted[bboxes_sorted['generated']==0] # Do not use the interpolated annotations
+    skip_frames = 100 # Use only each 10th frame
+    bboxes_sorted = bboxes_sorted[bboxes_sorted['frame'] % skip_frames == 0] # Do not use the interpolated annotations
     bboxes_visible = bboxes_sorted[bboxes_sorted['lost']==0] # Do not use the tracks that are not visible
     bboxes_visible = bboxes_visible[bboxes_visible['occluded']==0] # Or occluded
 
     unique_frames = set(bboxes_visible['frame'])
 
-    # Get image size
+    # Get image size (assume each video gives same sized frames)
     img = cv2.imread(os.path.join(dirpath.replace("annotations","videos"), 'frames', '0.jpg'))
     height, width, depth = img.shape
 
@@ -121,7 +122,7 @@ for dirpath, filename in anno_gen:
 # Obtain list of frames
 frames_list_vid = [[os.path.join(dirpath, f) for f in filenames] for dirpath,
  dirnames, filenames in os.walk(anno_dir) if 'frames' in dirpath]
-frames_list = list(itertools.chain.from_iterable(frames_list_vid))
+frames_list = list(itertools.chain.from_iterable(frames_list_vid[::10]))
 print "Total frames extracted: ", str(len(frames_list))
 
 # Shuffle list and divide in splits

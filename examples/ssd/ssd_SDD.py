@@ -71,7 +71,7 @@ def AddExtraLayers(net, use_batchnorm=True, lr_mult=1):
 caffe_root = os.chdir(os.environ['CAFFE_ROOT'])
 
 # Set true if you want to start training right after generating all files.
-run_soon = True
+run_soon = False
 # Set true if you want to load from most recently saved snapshot.
 # Otherwise, we will load from the pretrain_model defined below.
 resume_training = True
@@ -79,9 +79,9 @@ resume_training = True
 remove_old_models = False
 
 # The database file for training data. Created by data/coco/create_data.sh
-train_data = "data/SDD/lmdb/SDD_train_lmdb"
+train_data = "data/SDD/lmdb/SDD_small_train_lmdb"
 # The database file for testing data. Created by data/coco/create_data.sh
-test_data = "data/SDD/lmdb/SDD_val_lmdb"
+test_data = "data/SDD/lmdb/SDD_small_val_lmdb"
 # Specify the batch sampler.
 resize_width = 500
 resize_height = 500
@@ -203,7 +203,7 @@ train_transform_param = {
                 'random_order_prob': 0.0,
                 },
         'expand_param': {
-                'prob': 0.5,
+                'prob': 0.0,
                 'max_expand_ratio': 4.0,
                 },
         'emit_constraint': {
@@ -231,7 +231,7 @@ if use_batchnorm:
     base_lr = 0.0004
 else:
     # A learning rate for batch_size = 1, num_gpus = 1.
-    base_lr = 0.00004
+    base_lr = 0.000004
 
 # Modify the job name if you want.
 job_name = "SSD_{}".format(resize)
@@ -258,7 +258,7 @@ snapshot_prefix = "{}/{}".format(snapshot_dir, model_name)
 job_file = "{}/{}.sh".format(job_dir, model_name)
 
 # Stores the test image names and sizes. Created by data/coco/create_list.sh
-name_size_file = "data/SDD/val_name_size.txt"
+name_size_file = "data/SDD/val_small_name_size.txt"
 # The pretrained model. We use the Fully convolutional reduced (atrous) VGGNet.
 pretrain_model = "models/VGGNet/VGG_ILSVRC_16_layers_fc_reduced.caffemodel"
 # Stores LabelMapItem.
@@ -331,7 +331,7 @@ clip = False
 
 # Solver parameters.
 # Defining which GPUs to use.
-gpus = "0"
+gpus = "0,1"
 gpulist = gpus.split(",")
 num_gpus = len(gpulist)
 
@@ -358,8 +358,8 @@ elif normalization_mode == P.Loss.FULL:
   base_lr *= 2000.
 
 # Evaluate on whole test set.
-num_test_image = 13000
-test_batch_size = 8
+num_test_image = 9824
+test_batch_size = 4
 test_iter = num_test_image / test_batch_size
 
 solver_param = {
@@ -367,12 +367,12 @@ solver_param = {
     'base_lr': base_lr,
     'weight_decay': 0.0005,
     'lr_policy': "multistep",
-    'stepvalue': [80000, 100000, 120000],
+    'stepvalue': [2000, 2500, 3000],
     'gamma': 0.1,
     'momentum': 0.9,
     'iter_size': iter_size,
-    'max_iter': 400000,
-    'snapshot': 40000,
+    'max_iter': 4000,
+    'snapshot': 500,
     'display': 10,
     'average_loss': 10,
     'type': "SGD",
@@ -382,7 +382,7 @@ solver_param = {
     'snapshot_after_train': True,
     # Test parameters
     'test_iter': [test_iter],
-    'test_interval': 10000,
+    'test_interval': 250,
     'eval_type': "detection",
     'ap_version': "11point",
     'test_initialization': False,
@@ -396,7 +396,7 @@ det_out_param = {
     'nms_param': {'nms_threshold': 0.45, 'top_k': 400},
     'save_output_param': {
         'output_directory': output_result_dir,
-        'output_name_prefix': "detections_val_ssd300_results",
+        'output_name_prefix': "detections_val_ssd500_results",
         'output_format': "SDD",
         'label_map_file': label_map_file,
         'name_size_file': name_size_file,
